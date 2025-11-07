@@ -1,16 +1,17 @@
 /*
- * GLOBAL STYLES & RESET
+ * GLOBAL STYLES & RESET (TECH/DARK THEME)
  */
 :root {
-    --color-bg: #f4f7f6;
-    --color-dark: #333;
-    --color-primary: #007bff;
-    --color-primary-light: #e6f2ff;
-    --color-secondary: #6c757d;
-    --color-accent: #28a745;
-    --color-danger: #dc3545;
-    --color-white: #ffffff;
-    --shadow: 0 4px 12px rgba(0,0,0,0.05);
+    --color-bg: #1a1a2e;
+    --color-card: #1f2a47;
+    --color-text: #e0e0e0;
+    --color-primary: #39cffa;
+    --color-primary-light: #2c3a5c;
+    --color-secondary: #8a99c0;
+    --color-accent: #00ffab;
+    --color-danger: #ff4d6a;
+    --color-warning: #ffcb6b; /* For pause button */
+    --shadow: 0 0 15px rgba(57, 207, 250, 0.1);
 }
 
 * {
@@ -22,7 +23,7 @@
 
 body {
     background-color: var(--color-bg);
-    color: var(--color-dark);
+    color: var(--color-text);
     line-height: 1.6;
 }
 
@@ -30,11 +31,12 @@ body {
  * HEADER & FORM
  */
 header {
-    background-color: var(--color-white);
+    background-color: var(--color-card);
     padding: 2rem;
     margin: 1.5rem;
     border-radius: 8px;
     box-shadow: var(--shadow);
+    border: 1px solid var(--color-primary-light);
 }
 
 h1 {
@@ -54,7 +56,7 @@ h1 {
 .form-group {
     display: flex;
     flex-direction: column;
-    flex: 1 1 200px; /* Responsive flex items */
+    flex: 1 1 200px;
 }
 
 .form-group label {
@@ -65,21 +67,24 @@ h1 {
 
 .form-group input {
     padding: 0.75rem;
-    border: 1px solid #ccc;
+    border: 1px solid var(--color-primary-light);
     border-radius: 4px;
     font-size: 1rem;
+    background-color: var(--color-bg);
+    color: var(--color-text);
+    caret-color: var(--color-primary);
 }
 
 .form-group input:focus {
     outline: none;
     border-color: var(--color-primary);
-    box-shadow: 0 0 0 3px var(--color-primary-light);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 20%, transparent);
 }
 
 .form-actions {
     display: flex;
     gap: 1rem;
-    padding-bottom: 0.1rem; /* Align with input bottom padding */
+    padding-bottom: 0.1rem;
 }
 
 .btn {
@@ -94,52 +99,99 @@ h1 {
 
 .btn-start {
     background-color: var(--color-primary);
-    color: var(--color-white);
+    color: var(--color-bg);
 }
 .btn-start:hover {
-    background-color: #0056b3;
+    background-color: color-mix(in srgb, var(--color-primary) 80%, #fff);
 }
 
 .btn-clear {
-    background-color: var(--color-secondary);
-    color: var(--color-white);
+    background-color: var(--color-primary-light);
+    color: var(--color-secondary);
 }
 .btn-clear:hover {
-    background-color: #5a6268;
+    background-color: color-mix(in srgb, var(--color-primary-light) 80%, #fff);
+}
+
+/*
+ * MAIN LAYOUT (NEW)
+ * We use flexbox to make the timer container and log side-by-side.
+ */
+main {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+    padding: 0 1.5rem 1.5rem 1.5rem;
 }
 
 /*
  * TIMERS CONTAINER
  */
-main {
-    padding: 0 1.5rem 1.5rem 1.5rem;
-}
-
 #timersContainer {
+    flex: 3 1 600px; /* Timers take up more space */
     display: flex;
     flex-wrap: wrap;
     gap: 1.5rem;
     justify-content: center;
+    align-content: flex-start; /* Aligns timers to the top */
+}
+
+/*
+ * TIMER LOG (NEW)
+ */
+.log-container {
+    flex: 1 1 300px; /* Log takes up remaining space, min 300px */
+    background-color: var(--color-card);
+    border-radius: 8px;
+    box-shadow: var(--shadow);
+    border: 1px solid var(--color-primary-light);
+    padding: 1.5rem;
+    height: fit-content; /* Sits nicely */
+}
+.log-container h2 {
+    color: var(--color-primary);
+    text-align: center;
+    margin-bottom: 1rem;
+    border-bottom: 1px solid var(--color-primary-light);
+    padding-bottom: 0.5rem;
+}
+#timerLogList {
+    list-style: none;
+    padding: 0;
+    max-height: 400px; /* Prevents log from getting too long */
+    overflow-y: auto;
+}
+#timerLogList li {
+    background-color: var(--color-bg);
+    padding: 0.5rem 0.75rem;
+    border-radius: 4px;
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+    border: 1px solid var(--color-primary-light);
+}
+#timerLogList li strong {
+    color: var(--color-accent);
 }
 
 /*
  * SINGLE TIMER INSTANCE
  */
 .timer-instance {
-    background-color: var(--color-white);
+    background-color: var(--color-card);
     border-radius: 8px;
     box-shadow: var(--shadow);
+    border: 1px solid var(--color-primary-light);
     padding: 1.5rem;
     width: 280px;
     display: flex;
     flex-direction: column;
     align-items: center;
     position: relative;
-    transition: box-shadow 0.3s ease;
+    transition: box-shadow 0.3s ease, border-color 0.3s ease;
 }
-
 .timer-instance.finished {
     box-shadow: 0 0 0 3px var(--color-accent);
+    border-color: var(--color-accent);
 }
 
 .timer-label {
@@ -149,7 +201,6 @@ main {
     text-align: center;
     word-break: break-word;
 }
-
 .timer-delete {
     position: absolute;
     top: 8px;
@@ -166,42 +217,36 @@ main {
     color: var(--color-danger);
 }
 
-/* * MODIFIED VISUAL STYLES
- * Replaced .timer-disk with SVG styles
+/*
+ * SVG VISUAL STYLES
  */
 .timer-visual {
     width: 200px;
     height: 200px;
-    position: relative; /* For centering the time display */
+    position: relative;
 }
-
 .timer-svg {
     width: 100%;
     height: 100%;
-    /* Start the timer at the top (12 o'clock) */
     transform: rotate(-90deg);
 }
-
 .timer-path-background {
     fill: none;
     stroke: var(--color-primary-light);
-    stroke-width: 10px; /* Wider stroke */
+    stroke-width: 8px;
 }
-
 .timer-path-remaining {
     fill: none;
     stroke: var(--color-primary);
-    stroke-width: 10px;
-    stroke-linecap: round; /* Makes the line end rounded */
+    stroke-width: 8px;
+    stroke-linecap: round;
     transition: stroke-dashoffset 0.1s linear;
 }
-
 .timer-instance.finished .timer-path-remaining {
     stroke: var(--color-accent);
 }
 
 .timer-time-display {
-    /* Re-center the time display using absolute positioning */
     position: absolute;
     width: 100%;
     height: 100%;
@@ -210,23 +255,62 @@ main {
     display: flex;
     align-items: center;
     justify-content: center;
-
-    font-size: 2.5rem;
-    font-weight: 300;
-    color: var(--color-dark);
+    font-family: 'Roboto Mono', 'Share Tech Mono', monospace; 
+    font-size: 2.75rem;
+    font-weight: 600;
+    color: var(--color-text);
     z-index: 2;
-    background: rgba(255, 255, 255, 0.8);
-    padding: 0.25rem 0.75rem;
-    border-radius: 4px;
-    font-feature-settings: "tnum"; /* Tabular nums for monospacing */
+    font-feature-settings: "tnum";
     font-variant-numeric: tabular-nums;
-    
-    /* Make background only cover the text */
-    width: auto;
-    height: auto;
 }
-
 .timer-instance.finished .timer-time-display {
     color: var(--color-accent);
-    font-weight: 600;
+    font-weight: 700;
+}
+
+/*
+ * PAUSE STYLES (NEW)
+ */
+.timer-toggle-pause {
+    width: 100%;
+    margin-top: 1rem;
+    background-color: var(--color-warning);
+    color: var(--color-bg);
+    font-size: 0.9rem;
+    padding: 0.5rem 1rem;
+}
+.timer-toggle-pause:hover {
+    background-color: color-mix(in srgb, var(--color-warning) 80%, #fff);
+}
+
+/* Visual state when paused */
+.timer-instance.paused .timer-visual::after {
+    content: 'PAUSED';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(26, 26, 46, 0.7); /* Dark overlay */
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--color-warning);
+    font-weight: 700;
+    z-index: 3;
+    backdrop-filter: blur(2px);
+}
+.timer-instance.paused .timer-path-remaining {
+    stroke: var(--color-secondary); /* Gray out the ring */
+}
+.timer-instance.paused .timer-toggle-pause {
+    background-color: var(--color-accent);
+    color: var(--color-bg);
+}
+.timer-instance.paused .timer-toggle-pause::before {
+    content: 'Resume'; /* Change button text */
+}
+.timer-instance.paused .timer-toggle-pause span {
+    display: none; /* Hide original "Pause" text */
 }

@@ -6,8 +6,37 @@ document.addEventListener('DOMContentLoaded', () => {
     const timerDurationInput = document.getElementById('timerDuration');
     const timersContainer = document.getElementById('timersContainer');
     const timerTemplate = document.getElementById('timerTemplate');
+    const timerLogList = document.getElementById('timerLogList'); // NEW: For log
 
-    // --- NEW: SVG Circle Calculations ---
+    // --- NEW: Audio Setup ---
+    // Create a single AudioContext to be reused
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+    /**
+     * Plays a short beep sound.
+     */
+    function playBeep() {
+        if (!audioCtx) return; // Audio not supported
+        
+        // Use a simple oscillator to create a beep
+        const oscillator = audioCtx.createOscillator();
+        const gainNode = audioCtx.createGain();
+
+        oscillator.type = 'sine'; // A clean sine wave
+        oscillator.frequency.setValueAtTime(880, audioCtx.currentTime); // A high "A" note
+        gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime); // Start at 30% volume
+
+        // Ramp down volume quickly to create a "beep"
+        gainNode.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.2);
+
+        oscillator.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+        
+        oscillator.start(audioCtx.currentTime);
+        oscillator.stop(audioCtx.currentTime + 0.2);
+    }
+
+    // --- SVG Circle Calculations ---
     const CIRCLE_RADIUS = 45;
     const CIRCUMFERENCE = 2 * Math.PI * CIRCLE_RADIUS;
 
@@ -28,38 +57,38 @@ document.addEventListener('DOMContentLoaded', () => {
         const now = Date.now();
         const endTime = now + totalDurationMs;
 
-        // 1. Clone template
         const templateClone = timerTemplate.content.cloneNode(true);
         const timerInstanceEl = templateClone.querySelector('.timer-instance');
         const labelEl = templateClone.querySelector('.timer-label');
-        
-        // --- MODIFIED: Get SVG path instead of disk div ---
         const pathEl = templateClone.querySelector('.timer-path-remaining');
         const timeDisplayEl = templateClone.querySelector('.timer-time-display');
+        const pauseButtonEl = templateClone.querySelector('.timer-toggle-pause');
 
-        // 2. Set initial values
         labelEl.textContent = name;
         timeDisplayEl.textContent = formatTime(totalDurationMs);
-        
-        // --- NEW: Set initial SVG properties ---
         pathEl.setAttribute("stroke-dasharray", CIRCUMFERENCE);
-        pathEl.setAttribute("stroke-dashoffset", 0); // Start with a full ring
+        pathEl.setAttribute("stroke-dashoffset", 0);
 
-        // 3. Create timer state object
+        // NEW: Add a span inside the pause button for text-swapping
+        const pauseButtonText = document.createElement('span');
+        pauseButtonText.textContent = 'Pause';
+        pauseButtonEl.appendChild(pauseButtonText);
+
         const timerObj = {
             element: timerInstanceEl,
-            pathElement: pathEl, // <-- MODIFIED: Storing path element
+            pathElement: pathEl,
             timeDisplayElement: timeDisplayEl,
             endTime: endTime,
             totalDuration: totalDurationMs,
-            isFinished: false
+            name: name, // NEW: Store name for logging
+            isFinished: false,
+            isPaused: false, // NEW: Pause state
+            timeRemainingWhenPaused: 0 // NEW: Store remaining time
         };
 
-        // 4. Add to DOM and state array
         timersContainer.appendChild(templateClone);
         activeTimers.push(timerObj);
 
-        // 5. Start a (single) animation loop if not already running
         if (!isAnimationLoopRunning) {
             startAnimationLoop();
         }
@@ -81,7 +110,9 @@ document.addEventListener('DOMContentLoaded', () => {
         let hasActiveTimers = false;
 
         for (const timer of activeTimers) {
-            if (timer.isFinished) {
+            // NEW: Skip timers that are finished OR paused
+            if (timer.isFinished || timer.isPaused) {
+                if (!timer.isFinished) hasActiveTimers = true; // Keep loop running if paused
                 continue;
             }
 
@@ -90,30 +121,71 @@ document.addEventListener('DOMContentLoaded', () => {
             if (timeRemaining <= 0) {
                 // Timer finished
                 timer.isFinished = true;
-                // --- MODIFIED: Set offset to full circumference to "empty" the ring ---
                 timer.pathElement.setAttribute("stroke-dashoffset", CIRCUMFERENCE);
                 timer.timeDisplayElement.textContent = 'Done!';
                 timer.element.classList.add('finished');
+                
+                playBeep(); // NEW: Play sound
+                logTimer(timer); // NEW: Log the timer
             } else {
                 // Timer still running
                 const remainingPercent = timeRemaining / timer.totalDuration;
-                
-                // --- MODIFIED: Calculate and set stroke-dashoffset ---
                 const offset = CIRCUMFERENCE * (1 - remainingPercent);
                 timer.pathElement.setAttribute("stroke-dashoffset", offset);
-                
                 timer.timeDisplayElement.textContent = formatTime(timeRemaining);
                 hasActiveTimers = true; // Mark that we still have work to do
             }
         }
 
-        // If there are still active timers, request the next frame.
-        // Otherwise, stop the loop.
         if (hasActiveTimers) {
             requestAnimationFrame(updateAllTimers);
         } else {
             isAnimationLoopRunning = false;
         }
+    }
+
+    /**
+     * NEW: Toggles the pause state of a timer.
+     * @param {Object} timerObj - The timer object from the activeTimers array.
+     */
+    function togglePause(timerObj) {
+        timerObj.isPaused = !timerObj.isPaused; // Flip the pause state
+
+        if (timerObj.isPaused) {
+            // --- PAUSING ---
+            // Store how much time was left
+            timerObj.timeRemainingWhenPaused = timerObj.endTime - Date.now();
+            timerObj.element.classList.add('paused');
+        } else {
+            // --- RESUMING ---
+            // Calculate new end time based on when we resumed
+            timerObj.endTime = Date.now() + timerObj.timeRemainingWhenPaused;
+            timerObj.element.classList.remove('paused');
+            
+            // Ensure animation loop is running
+            if (!isAnimationLoopRunning) {
+                startAnimationLoop();
+            }
+        }
+    }
+
+    /**
+     * NEW: Adds a completed timer to the log.
+     * @param {Object} timerObj - The timer object that just finished.
+     */
+    function logTimer(timerObj) {
+        // Format total duration (which is in ms) to MM:SS
+        const totalSeconds = Math.round(timerObj.totalDuration / 1000);
+        const minutes = Math.floor(totalSeconds / 60);
+        const seconds = totalSeconds % 60;
+        const timeString = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+        
+        // Create and add the log list item
+        const logItem = document.createElement('li');
+        logItem.innerHTML = `<strong>${timerObj.name}</strong> - ${timeString}`;
+        
+        // Add to top of list
+        timerLogList.prepend(logItem);
     }
 
     /**
@@ -135,15 +207,13 @@ document.addEventListener('DOMContentLoaded', () => {
      */
     function removeTimer(timerInstanceElement) {
         const index = activeTimers.findIndex(timer => timer.element === timerInstanceElement);
-        
         if (index > -1) {
             activeTimers.splice(index, 1);
         }
-        
         timerInstanceElement.remove();
     }
 
-    // --- Event Listeners (No changes here) ---
+    // --- Event Listeners ---
 
     timerForm.addEventListener('submit', (event) => {
         event.preventDefault(); 
@@ -160,13 +230,25 @@ document.addEventListener('DOMContentLoaded', () => {
         timerNameInput.focus();
     });
 
+    // MODIFIED: Click listener now handles delete AND pause
     timersContainer.addEventListener('click', (event) => {
+        const timerInstance = event.target.closest('.timer-instance');
+        if (!timerInstance) return; // Click was not inside a timer
+
+        // Find the corresponding timer object
+        const timerObj = activeTimers.find(timer => timer.element === timerInstance);
+        if (!timerObj) return;
+
+        // Case 1: Clicked delete button
         if (event.target.classList.contains('timer-delete')) {
-            const timerInstance = event.target.closest('.timer-instance');
-            if (timerInstance) {
-                removeTimer(timerInstance);
+            removeTimer(timerInstance);
+        }
+        
+        // Case 2: Clicked pause/resume button
+        if (event.target.classList.contains('timer-toggle-pause')) {
+            if (!timerObj.isFinished) { // Don't allow pause on finished timers
+                togglePause(timerObj);
             }
         }
     });
-
 });
