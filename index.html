@@ -36,7 +36,15 @@
             <button class="timer-delete" title="Remove timer">&times;</button>
             <h3 class="timer-label">Timer Name</h3>
             <div class="timer-visual">
-                <div class="timer-disk"></div>
+                <svg class="timer-svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                    <circle class="timer-path-background" cx="50" cy="50" r="45" />
+                    <circle
+                      class="timer-path-remaining"
+                      cx="50"
+                      cy="50"
+                      r="45"
+                    />
+                </svg>
                 <span class="timer-time-display">00:00</span>
             </div>
         </div>

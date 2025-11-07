@@ -166,51 +166,64 @@ main {
     color: var(--color-danger);
 }
 
-/*
- * THE VISUAL DISK
+/* * MODIFIED VISUAL STYLES
+ * Replaced .timer-disk with SVG styles
  */
 .timer-visual {
     width: 200px;
     height: 200px;
-    border-radius: 50%;
-    background-color: var(--color-primary-light);
-    position: relative;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    overflow: hidden; /* Ensures scaling disk doesn't bleed */
+    position: relative; /* For centering the time display */
 }
 
-.timer-disk {
+.timer-svg {
     width: 100%;
     height: 100%;
-    border-radius: 50%;
-    background-color: var(--color-primary);
-    position: absolute;
-    top: 0;
-    left: 0;
-    transform: scale(1); /* Initial state */
-    /* * A slight transition smooths out the 'jaggies' from 
-     * requestAnimationFrame, blending frames together.
-     */
-    transition: transform 0.1s linear;
+    /* Start the timer at the top (12 o'clock) */
+    transform: rotate(-90deg);
 }
 
-.timer-instance.finished .timer-disk {
-    background-color: var(--color-accent);
+.timer-path-background {
+    fill: none;
+    stroke: var(--color-primary-light);
+    stroke-width: 10px; /* Wider stroke */
+}
+
+.timer-path-remaining {
+    fill: none;
+    stroke: var(--color-primary);
+    stroke-width: 10px;
+    stroke-linecap: round; /* Makes the line end rounded */
+    transition: stroke-dashoffset 0.1s linear;
+}
+
+.timer-instance.finished .timer-path-remaining {
+    stroke: var(--color-accent);
 }
 
 .timer-time-display {
+    /* Re-center the time display using absolute positioning */
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
     font-size: 2.5rem;
     font-weight: 300;
     color: var(--color-dark);
-    position: relative; /* Sits on top of the disk */
     z-index: 2;
     background: rgba(255, 255, 255, 0.8);
     padding: 0.25rem 0.75rem;
     border-radius: 4px;
     font-feature-settings: "tnum"; /* Tabular nums for monospacing */
     font-variant-numeric: tabular-nums;
+    
+    /* Make background only cover the text */
+    width: auto;
+    height: auto;
 }
 
 .timer-instance.finished .timer-time-display {

@@ -7,6 +7,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const timersContainer = document.getElementById('timersContainer');
     const timerTemplate = document.getElementById('timerTemplate');
 
+    // --- NEW: SVG Circle Calculations ---
+    const CIRCLE_RADIUS = 45;
+    const CIRCUMFERENCE = 2 * Math.PI * CIRCLE_RADIUS;
+
     // --- State ---
     /** @type {Array<Object>} */
     let activeTimers = [];
@@ -28,17 +32,23 @@ document.addEventListener('DOMContentLoaded', () => {
         const templateClone = timerTemplate.content.cloneNode(true);
         const timerInstanceEl = templateClone.querySelector('.timer-instance');
         const labelEl = templateClone.querySelector('.timer-label');
-        const diskEl = templateClone.querySelector('.timer-disk');
+        
+        // --- MODIFIED: Get SVG path instead of disk div ---
+        const pathEl = templateClone.querySelector('.timer-path-remaining');
         const timeDisplayEl = templateClone.querySelector('.timer-time-display');
 
         // 2. Set initial values
         labelEl.textContent = name;
         timeDisplayEl.textContent = formatTime(totalDurationMs);
+        
+        // --- NEW: Set initial SVG properties ---
+        pathEl.setAttribute("stroke-dasharray", CIRCUMFERENCE);
+        pathEl.setAttribute("stroke-dashoffset", 0); // Start with a full ring
 
         // 3. Create timer state object
         const timerObj = {
             element: timerInstanceEl,
-            diskElement: diskEl,
+            pathElement: pathEl, // <-- MODIFIED: Storing path element
             timeDisplayElement: timeDisplayEl,
             endTime: endTime,
             totalDuration: totalDurationMs,
@@ -80,13 +90,18 @@ document.addEventListener('DOMContentLoaded', () => {
             if (timeRemaining <= 0) {
                 // Timer finished
                 timer.isFinished = true;
-                timer.diskElement.style.transform = 'scale(0)';
+                // --- MODIFIED: Set offset to full circumference to "empty" the ring ---
+                timer.pathElement.setAttribute("stroke-dashoffset", CIRCUMFERENCE);
                 timer.timeDisplayElement.textContent = 'Done!';
                 timer.element.classList.add('finished');
             } else {
                 // Timer still running
                 const remainingPercent = timeRemaining / timer.totalDuration;
-                timer.diskElement.style.transform = `scale(${remainingPercent.toFixed(5)})`;
+                
+                // --- MODIFIED: Calculate and set stroke-dashoffset ---
+                const offset = CIRCUMFERENCE * (1 - remainingPercent);
+                timer.pathElement.setAttribute("stroke-dashoffset", offset);
+                
                 timer.timeDisplayElement.textContent = formatTime(timeRemaining);
                 hasActiveTimers = true; // Mark that we still have work to do
             }
@@ -107,8 +122,6 @@ document.addEventListener('DOMContentLoaded', () => {
      * @returns {string} - Formatted time string.
      */
     function formatTime(ms) {
-        // Add 999ms to ceiling the seconds, preventing "00:00" from showing
-        // for almost a full second before the timer completes.
         const totalSeconds = Math.ceil((ms + 999) / 1000);
         const seconds = totalSeconds % 60;
         const minutes = Math.floor(totalSeconds / 60);
@@ -121,24 +134,19 @@ document.addEventListener('DOMContentLoaded', () => {
      * @param {HTMLElement} timerInstanceElement - The .timer-instance element to remove.
      */
     function removeTimer(timerInstanceElement) {
-        // Find the timer object in the array
         const index = activeTimers.findIndex(timer => timer.element === timerInstanceElement);
         
         if (index > -1) {
-            // Remove from array
             activeTimers.splice(index, 1);
         }
         
-        // Remove from DOM
         timerInstanceElement.remove();
     }
 
-    // --- Event Listeners ---
+    // --- Event Listeners (No changes here) ---
 
-    // 1. Listen for new timer form submissions
     timerForm.addEventListener('submit', (event) => {
-        event.preventDefault(); // Stop page reload
-
+        event.preventDefault(); 
         const name = timerNameInput.value.trim() || "Untitled Timer";
         const duration = parseFloat(timerDurationInput.value);
 
@@ -146,18 +154,13 @@ document.addEventListener('DOMContentLoaded', () => {
             alert('Please enter a valid duration in minutes.');
             return;
         }
-
         createTimer(name, duration);
-
-        // Clear inputs
         timerNameInput.value = '';
         timerDurationInput.value = '';
         timerNameInput.focus();
     });
 
-    // 2. Listen for "delete" button clicks (Event Delegation)
     timersContainer.addEventListener('click', (event) => {
-        // Check if the clicked element is a delete button
         if (event.target.classList.contains('timer-delete')) {
             const timerInstance = event.target.closest('.timer-instance');
             if (timerInstance) {
